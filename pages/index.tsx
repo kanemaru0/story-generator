@@ -1,5 +1,14 @@
 import { useState } from 'react';
 
+interface CheckResult {
+  構造矛盾?: string;
+  トーン矛盾?: string;
+  ロジック矛盾?: string;
+  キーワード間矛盾?: string;
+  時系列矛盾?: string;
+  raw?: string;
+}
+
 export default function Home() {
   const [genre, setGenre] = useState('異世界転生・冒険ファンタジー系');
   const [ambience, setAmbience] = useState('');
@@ -9,7 +18,7 @@ export default function Home() {
   const [length, setLength] = useState('');
   const [format, setFormat] = useState('');
   const [story, setStory] = useState('');
-  const [check, setCheck] = useState({});
+  const [check, setCheck] = useState<CheckResult>({});
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
@@ -120,11 +129,11 @@ export default function Home() {
 
       <h2>🔍 矛盾チェック</h2>
       <div>
-        構造矛盾: {check['構造矛盾'] || 'なし'}<br />
-        トーン矛盾: {check['トーン矛盾'] || 'なし'}<br />
-        ロジック矛盾: {check['ロジック矛盾'] || 'なし'}<br />
-        キーワード間矛盾: {check['キーワード間矛盾'] || 'なし'}<br />
-        時系列矛盾: {check['時系列矛盾'] || 'なし'}
+        構造矛盾: {check.構造矛盾 || 'なし'}<br />
+        トーン矛盾: {check.トーン矛盾 || 'なし'}<br />
+        ロジック矛盾: {check.ロジック矛盾 || 'なし'}<br />
+        キーワード間矛盾: {check.キーワード間矛盾 || 'なし'}<br />
+        時系列矛盾: {check.時系列矛盾 || 'なし'}
       </div>
 
       <h2>⭐ ユーザーレビュー</h2>
