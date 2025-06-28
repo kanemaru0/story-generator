@@ -73,7 +73,7 @@ ${generatedStory}
 
     const checkRaw = await generatePart(apiKey, checkPrompt, 1000, "物語の矛盾検出AI");
 
-    let parsedCheck: CheckResult;
+    let parsedCheck: { [key: string]: string } = {};
     try {
       parsedCheck = JSON.parse(checkRaw);
     } catch {
@@ -91,21 +91,12 @@ ${generatedStory}
   }
 }
 
-type CheckResult = {
-  構造矛盾?: string;
-  トーン矛盾?: string;
-  ロジック矛盾?: string;
-  キーワード間矛盾?: string;
-  時系列矛盾?: string;
-  raw?: string; // JSON.parse失敗時の生データ格納用
-};
-
 async function generatePart(apiKey, prompt, maxTokens, systemRole = "あなたはプロの物語作成AIです。") {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`
     },
     body: JSON.stringify({
       model: "gpt-4o",
