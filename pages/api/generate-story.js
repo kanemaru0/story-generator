@@ -83,7 +83,7 @@ ${generatedStory}
     let parsedCheck;
     try {
       parsedCheck = JSON.parse(check);
-    } catch (e) {
+    } catch  {
       parsedCheck = { raw: check };
     }
 
