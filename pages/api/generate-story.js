@@ -73,7 +73,7 @@ ${generatedStory}
 
     const checkRaw = await generatePart(apiKey, checkPrompt, 1000, "物語の矛盾検出AI");
 
-    let parsedCheck: { [key: string]: string } = {};
+    let parsedCheck = {};
     try {
       parsedCheck = JSON.parse(checkRaw);
     } catch {
@@ -84,7 +84,6 @@ ${generatedStory}
       story: generatedStory,
       check: parsedCheck
     });
-
   } catch (error) {
     console.error("物語生成エラー:", error);
     return res.status(500).json({ message: '物語生成中にエラーが発生しました。' });
