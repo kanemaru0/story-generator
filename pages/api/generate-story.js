@@ -43,7 +43,13 @@ export default async function handler(req, res) {
     if (length.includes('長編')) parts = 4;
 
     for (let i = 1; i <= parts; i++) {
-      const partPrompt = basePrompt + `第${i}部として続けてください。前のストーリーの続きです。指定文字数を満たすまで物語を進めてください。`;
+      let partPrompt = '';
+      if (i === 1) {
+        partPrompt = basePrompt + `第1部として物語を開始してください。`;
+      } else {
+        partPrompt = basePrompt + `第${i}部として前のストーリーの続きです。指定文字数を満たすまで物語を進めてください。`;
+      }
+
       const part = await generatePart(apiKey, partPrompt, maxTokens);
       generatedStory += (i > 1 ? "\n\n" : "") + part;
     }

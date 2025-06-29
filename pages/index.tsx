@@ -40,6 +40,36 @@ export default function Home() {
     }
   };
 
+  const handleContinue = async () => {
+    if (!story) {
+      alert('まず物語を生成してください。');
+      return;
+    }
+    setLoading(true);
+    const response = await fetch('/api/generate-story', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        genre,
+        ambience,
+        structure,
+        keywords,
+        audience,
+        length,
+        format,
+        previousStory: story, // 続き生成用に送信（API側で対応必要）
+      }),
+    });
+    const data = await response.json();
+    setLoading(false);
+    if (data.story) {
+      setStory(prev => prev + '\n\n' + data.story);
+      setCheck(data.check);
+    } else {
+      alert('続きを生成できませんでした。');
+    }
+  };
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>ストーリークリエイター</h1>
@@ -154,7 +184,7 @@ export default function Home() {
           {loading ? '生成中...' : '再生成'}
         </button>
         <button onClick={() => location.reload()}>別の物語を作成（TOPへ戻る）</button>
-        {length.includes('長編') && <button>続きを生成する ➤➤➤</button>}
+        <button onClick={handleContinue} disabled={loading}>続きを生成する ➤➤➤</button>
       </div>
     </main>
   );
