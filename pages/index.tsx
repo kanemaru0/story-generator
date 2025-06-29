@@ -21,6 +21,10 @@ export default function Home() {
   const [check, setCheck] = useState<CheckResult>({});
   const [loading, setLoading] = useState(false);
 
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState('★★★★★');
+  const [submittedReview, setSubmittedReview] = useState<{ rating: string; text: string } | null>(null);
+
   const handleGenerate = async () => {
     setLoading(true);
     setStory('');
@@ -57,7 +61,7 @@ export default function Home() {
         audience,
         length,
         format,
-        previousStory: story, // 続き生成用に送信（API側で対応必要）
+        previousStory: story, // 続き生成用に送信（API側の対応必要）
       }),
     });
     const data = await response.json();
@@ -70,11 +74,17 @@ export default function Home() {
     }
   };
 
+  const handleReviewSubmit = () => {
+    setSubmittedReview({ rating: reviewRating, text: reviewText });
+    setReviewText('');
+  };
+
   return (
     <main style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>ストーリークリエイター</h1>
       <p>AIがあなたの条件に沿ったオリジナル物語を生成します。</p>
 
+      {/* 各種選択項目 */}
       <div>
         <label>ジャンル</label>
         <select value={genre} onChange={(e) => setGenre(e.target.value)}>
@@ -168,7 +178,7 @@ export default function Home() {
 
       <h2>⭐ ユーザーレビュー</h2>
       <div>
-        <select>
+        <select value={reviewRating} onChange={(e) => setReviewRating(e.target.value)}>
           <option>★★★★★</option>
           <option>★★★★</option>
           <option>★★★</option>
@@ -176,8 +186,21 @@ export default function Home() {
           <option>★</option>
         </select>
       </div>
-      <textarea placeholder="感想をお書きください"></textarea>
-      <button>レビューを投稿する</button>
+      <textarea
+        placeholder="感想をお書きください"
+        value={reviewText}
+        onChange={(e) => setReviewText(e.target.value)}
+      ></textarea>
+      <button onClick={handleReviewSubmit}>レビューを投稿する</button>
+
+      {submittedReview && (
+        <div>
+          <h3>投稿されたレビュー</h3>
+          <p>評価: {submittedReview.rating}</p>
+          <p>コメント: {submittedReview.text}</p>
+          <p style={{ color: 'gray', fontSize: 'small' }}>※簡易保存なのでリロードで消えます</p>
+        </div>
+      )}
 
       <div style={{ marginTop: '10px' }}>
         <button onClick={handleGenerate} disabled={loading}>
