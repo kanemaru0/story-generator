@@ -3,14 +3,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { genre, ambience, structure, keywords, audience, length, format, previousStory } = req.body;
+  const { genre, ambience, structure, keywords, audience, length, format, previousStory, part } = req.body;
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ message: 'OpenAI API キーが設定されていません。' });
   }
 
-  // ベースプロンプト
   const basePrompt = `
 あなたはプロの物語作成AIです。次の条件に沿ったストーリーを日本語で生成してください。
 
@@ -21,37 +20,26 @@ export default async function handler(req, res) {
 【読者層】${audience}
 【文字数の目安】${length}
 【形式】${format}
-`;
 
-  // previousStory がある場合は続き生成プロンプト、ない場合は初回プロンプト
-  const storyPrompt = previousStory
-    ? `${basePrompt}
-これまでの物語：
-${previousStory}
-
-この物語の続きとして、前回の流れを保ちながら物語を進めてください。`
-    : `${basePrompt}
 ストーリー開始：
 `;
 
-  // max_tokens 設定
-  let maxTokens = 3000;
-  if (length.includes('中編')) {
-    maxTokens = 3500;
-  } else if (length.includes('短編')) {
-    maxTokens = 3000;
-  } else if (length.includes('長編')) {
-    maxTokens = 3500;
+  const maxTokens = 3500;
+  let prompt = '';
+
+  if (previousStory) {
+    prompt = `${previousStory}\n\n第${part}部として前のストーリーの続きです。目安の部数を超えている場合でも希望に応じて物語を進めてください。`;
+  } else {
+    prompt = basePrompt + `第${part}部として物語を開始してください。`;
   }
 
   try {
-    const generatedStory = await generatePart(apiKey, storyPrompt, maxTokens);
+    const generatedStory = await generatePart(apiKey, prompt, maxTokens);
 
     if (!generatedStory) {
       return res.status(500).json({ message: '物語生成に失敗しました。' });
     }
 
-    // 矛盾チェック
     const checkPrompt = `
 次の物語の中で以下の矛盾を検出し、あれば指摘してください。
 ・構造矛盾（ジャンルとテンションの食い違い）
@@ -74,7 +62,6 @@ ${generatedStory}
 `;
 
     const checkRaw = await generatePart(apiKey, checkPrompt, 1000, "物語の矛盾検出AI");
-
     let parsedCheck = {};
     try {
       parsedCheck = JSON.parse(checkRaw);
@@ -86,8 +73,9 @@ ${generatedStory}
       story: generatedStory,
       check: parsedCheck
     });
-  } catch (error) {
-    console.error("物語生成エラー:", error);
+
+  } catch (err) {
+    console.error("物語生成エラー:", err);
     return res.status(500).json({ message: '物語生成中にエラーが発生しました。' });
   }
 }

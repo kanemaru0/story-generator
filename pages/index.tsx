@@ -142,9 +142,9 @@ export default function Home() {
       <div>
         <label>文字数の目安</label>
         <div>
-          <input type="radio" name="length" value="短編（～5000字）" onChange={(e) => setLength(e.target.value)} /> 短編（～5000字）
-          <input type="radio" name="length" value="中編（～7500字）" onChange={(e) => setLength(e.target.value)} /> 中編（～7500字）
-          <input type="radio" name="length" value="長編（～10000字）" onChange={(e) => setLength(e.target.value)} /> 長編（～10000字）
+          <input type="radio" name="length" value="短編（～3部）" onChange={(e) => setLength(e.target.value)} /> 短編（～３部）
+          <input type="radio" name="length" value="中編（～４部）" onChange={(e) => setLength(e.target.value)} /> 中編（～４部）
+          <input type="radio" name="length" value="長編（～５部）" onChange={(e) => setLength(e.target.value)} /> 長編（～５部）
           <input type="radio" name="length" value="自動最適化" onChange={(e) => setLength(e.target.value)} /> 自動最適化
         </div>
       </div>
