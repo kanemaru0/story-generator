@@ -10,9 +10,19 @@ export default async function handler(req, res) {
     return res.status(500).json({ message: 'OpenAI API キーが設定されていません。' });
   }
 
-  let prompt = `
-あなたはプロの物語作成AIです。
-次の条件に沿ったストーリーを日本語で生成してください。
+  // 部数上限判定
+  const getMaxPart = () => {
+    if (length.includes('短編')) return 3;
+    if (length.includes('中編')) return 4;
+    if (length.includes('長編')) return 5;
+    return 5;
+  };
+
+  const partNumber = currentPart || 1;
+  const maxPart = getMaxPart();
+
+  let promptBase = `
+あなたはプロの物語作成AIです。次の条件に沿ったストーリーを日本語で生成してください。
 
 【ジャンル】${genre}
 【雰囲気・テンション】${ambience}
@@ -21,44 +31,49 @@ export default async function handler(req, res) {
 【読者層】${audience}
 【文字数の目安】${length}
 【形式】${format}
-
 `;
 
-  if (currentPart === 1) {
-    prompt += `第1部として物語を開始してください。`;
+  let prompt = '';
+  if (!previousStory) {
+    prompt = promptBase + `第1部として物語を開始してください。`;
   } else {
-    prompt += `第${currentPart}部として、以下の物語の続きです。
-前の物語を繰り返さず、次の章・次の展開を描いてください。
+    prompt = promptBase + `第${partNumber}部として、以下の物語の続きです。
+前の内容を繰り返さず、これまでの流れに沿った新しい展開を描いてください。
 
-前の物語：
+前のストーリー：
 ${previousStory}
 `;
+    if (partNumber > maxPart) {
+      prompt += `なお、指定された部数（${maxPart}部）は完了しています。さらに続く物語を自然に新章として進めてください。`;
+    }
   }
 
   try {
-    const content = await generatePart(apiKey, prompt, 3000);
+    const storyPart = await generatePart(apiKey, prompt, 3000);
+
     const checkPrompt = `
 次の物語の中で以下の矛盾を検出し、あれば指摘してください。
-・構造矛盾
-・トーン矛盾
-・ロジック矛盾
+・構造矛盾（ジャンルとテンションの食い違い）
+・トーン矛盾（キャラ設定やテーマと文体テンションの不一致）
+・ロジック矛盾（死亡／別れ／壊れた要素の復活）
 ・キーワード間矛盾
 ・時系列矛盾
 
 物語：
-${content}
+${storyPart}
 
-結果は以下形式で返してください。
+結果はJSON形式で出力し、形式は以下としてください：
 {
-  "構造矛盾": "...",
-  "トーン矛盾": "...",
-  "ロジック矛盾": "...",
-  "キーワード間矛盾": "...",
-  "時系列矛盾": "..."
+  "構造矛盾": "（内容または 'なし'）",
+  "トーン矛盾": "（内容または 'なし'）",
+  "ロジック矛盾": "（内容または 'なし'）",
+  "キーワード間矛盾": "（内容または 'なし'）",
+  "時系列矛盾": "（内容または 'なし'）"
 }
 `;
 
-    const checkRaw = await generatePart(apiKey, checkPrompt, 1000, '物語の矛盾検出AI');
+    const checkRaw = await generatePart(apiKey, checkPrompt, 1000, "物語の矛盾検出AI");
+
     let parsedCheck = {};
     try {
       parsedCheck = JSON.parse(checkRaw);
@@ -67,18 +82,19 @@ ${content}
     }
 
     return res.status(200).json({
-      story: content,
+      story: storyPart,
       check: parsedCheck,
-      partNumber: currentPart
+      partNumber,
+      message: partNumber > maxPart ? `指定部数（${maxPart}部）を超えましたが、自然な新章として続きが生成されました。` : undefined
     });
 
-  } catch (err) {
-    console.error('物語生成エラー:', err);
+  } catch (error) {
+    console.error("物語生成エラー:", error);
     return res.status(500).json({ message: '物語生成中にエラーが発生しました。' });
   }
 }
 
-async function generatePart(apiKey, prompt, maxTokens, systemRole = 'あなたはプロの物語作成AIです。') {
+async function generatePart(apiKey, prompt, maxTokens, systemRole = "あなたはプロの物語作成AIです。") {
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -94,6 +110,7 @@ async function generatePart(apiKey, prompt, maxTokens, systemRole = 'あなた�
       ]
     })
   });
+
   const data = await response.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
