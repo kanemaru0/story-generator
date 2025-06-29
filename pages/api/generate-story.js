@@ -24,9 +24,10 @@ export default async function handler(req, res) {
 ストーリー開始：
 `;
 
+  // max_tokens 設定（各分割パート用の目安）
   let maxTokens = 3000;
   if (length.includes('中編')) {
-    maxTokens = 4000;
+    maxTokens = 3500;
   } else if (length.includes('短編')) {
     maxTokens = 3000;
   } else if (length.includes('長編')) {
@@ -36,14 +37,15 @@ export default async function handler(req, res) {
   try {
     let generatedStory = '';
 
-    if (length.includes('長編')) {
-      const part1 = await generatePart(apiKey, basePrompt + '第一部を始めてください。', maxTokens);
-      generatedStory += part1;
+    // 分割生成回数（短編:2, 中編:3, 長編:4）
+    let parts = 2;
+    if (length.includes('中編')) parts = 3;
+    if (length.includes('長編')) parts = 4;
 
-      const part2 = await generatePart(apiKey, basePrompt + '第二部として続けてください。前のストーリーの続きです。', maxTokens);
-      generatedStory += '\n\n' + part2;
-    } else {
-      generatedStory = await generatePart(apiKey, basePrompt, maxTokens);
+    for (let i = 1; i <= parts; i++) {
+      const partPrompt = basePrompt + `第${i}部として続けてください。前のストーリーの続きです。指定文字数を満たすまで物語を進めてください。`;
+      const part = await generatePart(apiKey, partPrompt, maxTokens);
+      generatedStory += (i > 1 ? "\n\n" : "") + part;
     }
 
     if (!generatedStory) {
