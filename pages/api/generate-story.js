@@ -3,14 +3,25 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { genre, ambience, structure, keywords, audience, length, format, previousStory, part } = req.body;
+  const { genre, ambience, structure, keywords, audience, length, format, previousStory, currentPart } = req.body;
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return res.status(500).json({ message: 'OpenAI API キーが設定されていません。' });
   }
 
-  const basePrompt = `
+  // 部数上限判定
+  const getMaxPart = () => {
+    if (length.includes('短編')) return 3;
+    if (length.includes('中編')) return 4;
+    if (length.includes('長編')) return 5;
+    return 5;
+  };
+
+  const partNumber = currentPart || 1;
+  const maxPart = getMaxPart();
+
+  let promptBase = `
 あなたはプロの物語作成AIです。次の条件に沿ったストーリーを日本語で生成してください。
 
 【ジャンル】${genre}
@@ -21,25 +32,27 @@ export default async function handler(req, res) {
 【文字数の目安】${length}
 【形式】${format}
 
-ストーリー開始：
 `;
 
-  const maxTokens = 3500;
   let prompt = '';
-
-  if (previousStory) {
-    prompt = `${previousStory}\n\n第${part}部として前のストーリーの続きです。目安の部数を超えている場合でも希望に応じて物語を進めてください。`;
+  if (!previousStory) {
+    prompt = promptBase + `第1部として物語を開始してください。`;
   } else {
-    prompt = basePrompt + `第${part}部として物語を開始してください。`;
+    prompt = promptBase + `第${partNumber}部として、次のストーリーの続きです。前の内容を踏まえて物語を進めてください。
+
+前のストーリー：
+${previousStory}
+`;
+  }
+
+  // 上限超えたらメッセージ追加
+  if (partNumber > maxPart) {
+    prompt += `なお、指定の部数（${maxPart}部）は完了しています。それでも続ける場合は、これまでの流れに沿って自然に物語を進めてください。`;
   }
 
   try {
-    const generatedStory = await generatePart(apiKey, prompt, maxTokens);
-
-    if (!generatedStory) {
-      return res.status(500).json({ message: '物語生成に失敗しました。' });
-    }
-
+    const storyPart = await generatePart(apiKey, prompt, 3000);
+    
     const checkPrompt = `
 次の物語の中で以下の矛盾を検出し、あれば指摘してください。
 ・構造矛盾（ジャンルとテンションの食い違い）
@@ -49,7 +62,7 @@ export default async function handler(req, res) {
 ・時系列矛盾
 
 物語：
-${generatedStory}
+${storyPart}
 
 結果はJSON形式で出力し、形式は以下としてください：
 {
@@ -62,6 +75,7 @@ ${generatedStory}
 `;
 
     const checkRaw = await generatePart(apiKey, checkPrompt, 1000, "物語の矛盾検出AI");
+
     let parsedCheck = {};
     try {
       parsedCheck = JSON.parse(checkRaw);
@@ -70,12 +84,14 @@ ${generatedStory}
     }
 
     return res.status(200).json({
-      story: generatedStory,
-      check: parsedCheck
+      story: storyPart,
+      check: parsedCheck,
+      partNumber,  // フロントで部数管理しやすくするため返却
+      message: partNumber > maxPart ? `指定部数 ${maxPart} 部を超えましたが、続きの生成を行いました。` : undefined
     });
 
-  } catch (err) {
-    console.error("物語生成エラー:", err);
+  } catch (error) {
+    console.error("物語生成エラー:", error);
     return res.status(500).json({ message: '物語生成中にエラーが発生しました。' });
   }
 }

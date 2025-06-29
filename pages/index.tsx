@@ -21,10 +21,18 @@ export default function Home() {
   const [check, setCheck] = useState<CheckResult>({});
   const [loading, setLoading] = useState(false);
 
-  const [currentPart, setCurrentPart] = useState(1);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState('★★★★★');
   const [submittedReview, setSubmittedReview] = useState<{ rating: string; text: string } | null>(null);
+
+  const [currentPart, setCurrentPart] = useState(1);
+
+  const getMaxPart = () => {
+    if (length.includes('短編')) return 3;
+    if (length.includes('中編')) return 4;
+    if (length.includes('長編')) return 5;
+    return 5;
+  };
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -34,9 +42,7 @@ export default function Home() {
     const response = await fetch('/api/generate-story', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        genre, ambience, structure, keywords, audience, length, format, part: 1
-      }),
+      body: JSON.stringify({ genre, ambience, structure, keywords, audience, length, format }),
     });
     const data = await response.json();
     setLoading(false);
@@ -54,14 +60,18 @@ export default function Home() {
       return;
     }
     setLoading(true);
-    const nextPart = currentPart + 1;
     const response = await fetch('/api/generate-story', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        genre, ambience, structure, keywords, audience, length, format,
+        genre,
+        ambience,
+        structure,
+        keywords,
+        audience,
+        length,
+        format,
         previousStory: story,
-        part: nextPart
       }),
     });
     const data = await response.json();
@@ -69,7 +79,7 @@ export default function Home() {
     if (data.story) {
       setStory(prev => prev + '\n\n' + data.story);
       setCheck(data.check);
-      setCurrentPart(nextPart);
+      setCurrentPart(prev => prev + 1);
     } else {
       alert('続きを生成できませんでした。');
     }
@@ -203,11 +213,19 @@ export default function Home() {
       )}
 
       <div style={{ marginTop: '10px' }}>
+        <p>現在の部数: 第{currentPart}部</p>
         <button onClick={handleGenerate} disabled={loading}>
           {loading ? '生成中...' : '再生成'}
         </button>
         <button onClick={() => location.reload()}>別の物語を作成（TOPへ戻る）</button>
-        <button onClick={handleContinue} disabled={loading}>続きを生成する ➤➤➤</button>
+        <button onClick={handleContinue} disabled={loading}>
+          続きを生成する ➤➤➤
+        </button>
+        {currentPart > getMaxPart() && (
+          <p style={{ color: 'gray', fontSize: 'small' }}>
+            ※指定部数を超えましたが、さらに続きの生成が可能です。
+          </p>
+        )}
       </div>
     </main>
   );
