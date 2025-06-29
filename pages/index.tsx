@@ -21,6 +21,7 @@ export default function Home() {
   const [check, setCheck] = useState<CheckResult>({});
   const [loading, setLoading] = useState(false);
 
+  const [currentPart, setCurrentPart] = useState(1);
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState('★★★★★');
   const [submittedReview, setSubmittedReview] = useState<{ rating: string; text: string } | null>(null);
@@ -29,10 +30,13 @@ export default function Home() {
     setLoading(true);
     setStory('');
     setCheck({});
+    setCurrentPart(1);
     const response = await fetch('/api/generate-story', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ genre, ambience, structure, keywords, audience, length, format }),
+      body: JSON.stringify({
+        genre, ambience, structure, keywords, audience, length, format, part: 1
+      }),
     });
     const data = await response.json();
     setLoading(false);
@@ -50,18 +54,14 @@ export default function Home() {
       return;
     }
     setLoading(true);
+    const nextPart = currentPart + 1;
     const response = await fetch('/api/generate-story', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        genre,
-        ambience,
-        structure,
-        keywords,
-        audience,
-        length,
-        format,
-        previousStory: story, // 続き生成用に送信（API側の対応必要）
+        genre, ambience, structure, keywords, audience, length, format,
+        previousStory: story,
+        part: nextPart
       }),
     });
     const data = await response.json();
@@ -69,6 +69,7 @@ export default function Home() {
     if (data.story) {
       setStory(prev => prev + '\n\n' + data.story);
       setCheck(data.check);
+      setCurrentPart(nextPart);
     } else {
       alert('続きを生成できませんでした。');
     }
@@ -84,7 +85,6 @@ export default function Home() {
       <h1>ストーリークリエイター</h1>
       <p>AIがあなたの条件に沿ったオリジナル物語を生成します。</p>
 
-      {/* 各種選択項目 */}
       <div>
         <label>ジャンル</label>
         <select value={genre} onChange={(e) => setGenre(e.target.value)}>
@@ -142,9 +142,9 @@ export default function Home() {
       <div>
         <label>文字数の目安</label>
         <div>
-          <input type="radio" name="length" value="短編（～3部）" onChange={(e) => setLength(e.target.value)} /> 短編（～３部）
-          <input type="radio" name="length" value="中編（～４部）" onChange={(e) => setLength(e.target.value)} /> 中編（～４部）
-          <input type="radio" name="length" value="長編（～５部）" onChange={(e) => setLength(e.target.value)} /> 長編（～５部）
+          <input type="radio" name="length" value="短編（～3部）" onChange={(e) => setLength(e.target.value)} /> 短編（～3部）
+          <input type="radio" name="length" value="中編（～4部）" onChange={(e) => setLength(e.target.value)} /> 中編（～4部）
+          <input type="radio" name="length" value="長編（～5部）" onChange={(e) => setLength(e.target.value)} /> 長編（～5部）
           <input type="radio" name="length" value="自動最適化" onChange={(e) => setLength(e.target.value)} /> 自動最適化
         </div>
       </div>
