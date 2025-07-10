@@ -24,7 +24,6 @@ export default function Home() {
   const [reviewText, setReviewText] = useState('');
   const [reviewRating, setReviewRating] = useState('★★★★★');
   const [submittedReview, setSubmittedReview] = useState<{ rating: string; text: string } | null>(null);
-
   const [currentPart, setCurrentPart] = useState(1);
 
   const getMaxPart = () => {
@@ -72,6 +71,7 @@ export default function Home() {
         length,
         format,
         previousStory: story,
+        currentPart: currentPart + 1,
       }),
     });
     const data = await response.json();
@@ -85,9 +85,35 @@ export default function Home() {
     }
   };
 
-  const handleReviewSubmit = () => {
-    setSubmittedReview({ rating: reviewRating, text: reviewText });
-    setReviewText('');
+  const handleReviewSubmit = async () => {
+    if (!reviewText) {
+      alert('コメントを入力してください');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/save-feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rating: reviewRating,
+          comment: reviewText,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(data.message || 'レビューを保存しました');
+        setSubmittedReview({ rating: reviewRating, text: reviewText });
+        setReviewText('');
+      } else {
+        alert(`保存に失敗しました: ${data.message}`);
+      }
+    } catch (error) {
+      console.error('レビュー送信エラー:', error);
+      alert('レビュー送信中にエラーが発生しました');
+    }
   };
 
   return (
